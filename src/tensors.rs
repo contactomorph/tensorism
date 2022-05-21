@@ -203,13 +203,9 @@ pub fn new_from_array<V: Copy, const N: usize>(array: &[V; N]) -> Tensor1<Static
 #[macro_export]
 macro_rules! from_array_to_tensor1 {
     ($values:expr) => {{
-        #[allow(bad_style)]
         enum UnnamedTag {}
-        lazy_static! {
-            static ref THUMBPRINT: u16 = {
-                let mut rng = rand::thread_rng();
-                rng.gen::<u16>()
-            };
+        lazy_static::lazy_static! {
+            static ref THUMBPRINT: u16 = generate_thumbprint();
         }
         impl DimTag for UnnamedTag {
             fn get_thumbprint() -> u16 {

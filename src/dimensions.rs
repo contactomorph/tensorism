@@ -1,13 +1,18 @@
 //! Abstractions for dimensions used in a tensor.
 
-use rand::Rng;
 use std::fmt::{Debug, Error, Formatter};
 use std::marker::{Copy, PhantomData};
+use std::sync::atomic::{AtomicU16, Ordering};
+
+static COUNTER: AtomicU16 = AtomicU16::new(0xF091);
 
 #[doc(hidden)]
 pub fn generate_thumbprint() -> u16 {
-    let mut rng = rand::thread_rng();
-    rng.gen::<u16>()
+    COUNTER
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+            Some(n.wrapping_mul(0x9CA3))
+        })
+        .unwrap()
 }
 
 /// An abstraction representing a static or dynamic information
@@ -50,9 +55,7 @@ impl<D: DimTag> Debug for Dim<D> {
         let tp = D::get_thumbprint();
         self.v.fmt(formatter)?;
         if tp != 0u16 {
-            formatter.write_str("|")?;
-            let b64 = base64::encode(tp.to_ne_bytes());
-            formatter.write_str(b64.as_str())?;
+            formatter.write_fmt(format_args!("|{:04x}", tp))?;
         }
         Ok(())
     }
@@ -81,11 +84,10 @@ impl<D: DimTag> Eq for Dim<D> {}
 pub type StaticDim<const N: usize> = Dim<StaticDimTag<N>>;
 
 #[macro_export]
-macro_rules! new_dim {
+macro_rules! new_dynamic_dim {
     ($integer:expr) => {{
-        #[allow(bad_style)]
         enum UnnamedTag {}
-        lazy_static! {
+        lazy_static::lazy_static! {
             static ref THUMBPRINT: u16 = generate_thumbprint();
         }
         impl DimTag for UnnamedTag {

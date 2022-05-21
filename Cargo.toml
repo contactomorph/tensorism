@@ -8,5 +8,4 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.4.0"
-rand = "0.6.5"
 base64 = "0.13.0"
