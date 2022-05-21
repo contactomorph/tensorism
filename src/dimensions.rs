@@ -10,17 +10,18 @@ static COUNTER: AtomicU16 = AtomicU16::new(0xF091);
 pub fn generate_thumbprint() -> u16 {
     COUNTER
         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
-            Some(n.wrapping_mul(0x9CA3))
+            Some(n.wrapping_mul(0x9CA3) | 0x34E1u16)
         })
         .unwrap()
 }
 
 /// An abstraction representing a static or dynamic information
 /// about a dimension.
-pub trait DimTag {
+pub trait DimTag: Eq + Copy {
     fn get_thumbprint() -> u16;
 }
 
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct StaticDimTag<const N: usize> {}
 
 impl<const N: usize> DimTag for StaticDimTag<N> {
@@ -31,12 +32,13 @@ impl<const N: usize> DimTag for StaticDimTag<N> {
 
 /// A type wrapping an usize value and representing
 /// a dimension.
-pub struct Dim<D: DimTag> {
-    phantom: PhantomData<D>,
+#[derive(Clone, Copy)]
+pub struct Dim<T: DimTag> {
+    phantom: PhantomData<T>,
     v: usize,
 }
 
-impl<D: DimTag> Dim<D> {
+impl<T: DimTag> Dim<T> {
     #[doc(hidden)]
     pub unsafe fn unsafe_new(v: usize) -> Self {
         Dim {
@@ -48,29 +50,22 @@ impl<D: DimTag> Dim<D> {
     pub fn as_usize(&self) -> usize {
         self.v
     }
+
+    pub fn get_thumbprint(&self) -> u16 {
+        T::get_thumbprint()
+    }
 }
 
-impl<D: DimTag> Debug for Dim<D> {
+impl<T: DimTag> Debug for Dim<T> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
-        let tp = D::get_thumbprint();
+        let tp = T::get_thumbprint();
         self.v.fmt(formatter)?;
         if tp != 0u16 {
-            formatter.write_fmt(format_args!("|{:04x}", tp))?;
+            formatter.write_fmt(format_args!("~{:04x}", tp))?;
         }
         Ok(())
     }
 }
-
-impl<D: DimTag> Clone for Dim<D> {
-    fn clone(&self) -> Self {
-        Dim {
-            phantom: PhantomData {},
-            v: self.v,
-        }
-    }
-}
-
-impl<D: DimTag> Copy for Dim<D> {}
 
 impl<TLhs: DimTag, TRhs: DimTag> PartialEq<Dim<TRhs>> for Dim<TLhs> {
     fn eq(&self, other: &Dim<TRhs>) -> bool {
@@ -78,7 +73,7 @@ impl<TLhs: DimTag, TRhs: DimTag> PartialEq<Dim<TRhs>> for Dim<TLhs> {
     }
 }
 
-impl<D: DimTag> Eq for Dim<D> {}
+impl<T: DimTag> Eq for Dim<T> {}
 
 /// An alias representing a staticly known dimension
 pub type StaticDim<const N: usize> = Dim<StaticDimTag<N>>;
@@ -86,6 +81,7 @@ pub type StaticDim<const N: usize> = Dim<StaticDimTag<N>>;
 #[macro_export]
 macro_rules! new_dynamic_dim {
     ($integer:expr) => {{
+        #[derive(PartialEq, Eq, Debug, Clone, Copy)]
         enum UnnamedTag {}
         lazy_static::lazy_static! {
             static ref THUMBPRINT: u16 = generate_thumbprint();
@@ -106,8 +102,8 @@ pub fn new_static_dim<const N: usize>() -> Dim<StaticDimTag<N>> {
     }
 }
 
-impl<D: DimTag> From<Dim<D>> for usize {
-    fn from(dim: Dim<D>) -> Self {
+impl<T: DimTag> From<Dim<T>> for usize {
+    fn from(dim: Dim<T>) -> Self {
         dim.v
     }
 }

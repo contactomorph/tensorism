@@ -1,5 +1,7 @@
 use std::any::Any;
 use tensorism::dimensions::*;
+use tensorism::shapes::{Shape, ShapeBuilder};
+use tensorism::tensors::{StaticMatrix, TensorBuilder};
 use tensorism::*;
 
 #[test]
@@ -7,7 +9,7 @@ fn dimension_types_are_distinct() {
     let n = 5;
     let d1 = new_dynamic_dim!(n);
     let d2 = new_dynamic_dim!(n);
-    assert!(d1.type_id() != d2.type_id());
+    assert_ne!(d1.type_id(), d2.type_id());
 }
 
 #[test]
@@ -20,10 +22,48 @@ fn dimensions_are_ok() {
     assert_eq!(5, d2.as_usize());
     assert_eq!(7, static_d.as_usize());
 
-    assert_eq!("5|f091", format!("{:?}", d1));
-    assert_eq!("5|8853", format!("{:?}", d2));
+    assert_ne!(format!("{:?}", d1), format!("{:?}", d2));
     assert_eq!("7", format!("{:?}", static_d));
 
     let static_d = new_static_dim::<5>();
     assert_eq!(static_d, d1);
+}
+
+#[test]
+fn tensor_equality() {
+    let s = "Hello world".to_owned();
+    let a = ShapeBuilder::with_static::<8>().with_static::<8>().fill(&s);
+    let b: StaticMatrix<8, 8, String> = a.clone();
+    assert_eq!(a, b);
+
+    let d = new_dynamic_dim!(4);
+    let c = ShapeBuilder::with(d).with_first().fill(&7);
+
+    assert_eq!(
+        format!(
+            "〈4~{0:04x}, 4~{0:04x}〉[7, 7, 7, 7 | 7, 7, 7, 7 | 7, 7, …]",
+            d.get_thumbprint()
+        ),
+        format!("{:?}", c)
+    );
+}
+
+#[test]
+fn building_shape() {
+    let d = new_dynamic_dim!(3);
+    let s = ShapeBuilder::with(d).with_static::<5>().with_first();
+
+    assert_eq!(45, s.count());
+    assert_eq!(
+        format!("〈3~{0:04x}, 5, 3~{0:04x}〉", d.get_thumbprint()),
+        format!("{:?}", s)
+    );
+}
+
+#[test]
+fn comparing_shapes() {
+    let s1 = ShapeBuilder::with(new_dynamic_dim!(4)).with_static::<4>();
+    let s2 = s1.switch_12();
+    assert_eq!(s1, s2);
+    assert_ne!(format!("{:?}", s1), format!("{:?}", s2));
 }
