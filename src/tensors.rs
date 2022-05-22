@@ -1,9 +1,9 @@
 //! The mathematical word tensor is used here more broadly to describe
 //! arrays with multiple indexes containing copiable data.
 
-use std::marker::{Copy, PhantomData};
-use std::fmt::{Debug, Error, Formatter};
 use super::dimensions::*;
+use std::fmt::{Debug, Error, Formatter};
+use std::marker::{Copy, PhantomData};
 
 /// A general trait shared by all tensor types.
 pub trait Tensor {
@@ -53,7 +53,9 @@ impl<V: Copy> Tensor for Tensor0<V> {
     type Element = V;
     type Dimensions = ();
     const RANK: u16 = 0;
-    fn count(&self) -> u64 { 1 }
+    fn count(&self) -> u64 {
+        1
+    }
     fn dims(&self) -> Self::Dimensions {}
 }
 
@@ -61,7 +63,9 @@ impl<D: DimTag, V: Copy> Tensor for Tensor1<D, V> {
     type Element = V;
     type Dimensions = (Dim<D>,);
     const RANK: u16 = 1;
-    fn count(&self) -> u64 { self.data.len() as u64 }
+    fn count(&self) -> u64 {
+        self.data.len() as u64
+    }
     fn dims(&self) -> Self::Dimensions {
         let n = self.data.len();
         unsafe { (Dim::<D>::unsafe_new(n),) }
@@ -72,7 +76,9 @@ impl<D1: DimTag, D2: DimTag, V: Copy> Tensor for Tensor2<D1, D2, V> {
     type Element = V;
     type Dimensions = (Dim<D1>, Dim<D2>);
     const RANK: u16 = 2;
-    fn count(&self) -> u64 { self.data.len() as u64 }
+    fn count(&self) -> u64 {
+        self.data.len() as u64
+    }
     fn dims(&self) -> Self::Dimensions {
         (self.d1, self.d2)
     }
@@ -121,7 +127,9 @@ impl<D: DimTag, V: Copy + Debug> Debug for Tensor1<D, V> {
         formatter.write_str("\u{3009}[")?;
         let mut i = 0usize;
         for elt in self.data.iter().take(10) {
-            if i > 0 { formatter.write_str(", ")? }
+            if i > 0 {
+                formatter.write_str(", ")?
+            }
             elt.fmt(formatter)?;
             i += 1
         }
@@ -135,7 +143,7 @@ impl<D: DimTag, V: Copy + Debug> Debug for Tensor1<D, V> {
 
 impl<V: Copy> Tensor0<V> {
     pub fn new(value: V) -> Self {
-        Tensor0::<V> { data: value, }
+        Tensor0::<V> { data: value }
     }
 }
 
@@ -147,11 +155,7 @@ impl<D: DimTag, V: Copy> Tensor1<D, V> {
         }
     }
 
-    pub fn set<VInput: Copy>(
-        &mut self,
-        input: &Tensor1<D, VInput>,
-        f: impl Fn(VInput) -> V,
-    ) {
+    pub fn set<VInput: Copy>(&mut self, input: &Tensor1<D, VInput>, f: impl Fn(VInput) -> V) {
         let ptr_o = self.data.as_mut_ptr();
         let ptr = input.data.as_ptr();
         for i in 0usize..self.data.len() {
@@ -208,8 +212,10 @@ macro_rules! from_array_to_tensor1 {
             };
         }
         impl DimTag for UnnamedTag {
-            fn get_thumbprint() -> u16 { *THUMBPRINT }
+            fn get_thumbprint() -> u16 {
+                *THUMBPRINT
+            }
         }
         unsafe { unsafe_from_array_to_tensor1::<UnnamedTag, _>($values) }
-    }}
+    }};
 }

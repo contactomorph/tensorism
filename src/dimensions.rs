@@ -1,8 +1,8 @@
 //! Abstractions for dimensions used in a tensor.
 
-use std::marker::{PhantomData, Copy};
-use std::fmt::{Debug, Error, Formatter};
 use rand::Rng;
+use std::fmt::{Debug, Error, Formatter};
+use std::marker::{Copy, PhantomData};
 
 #[doc(hidden)]
 pub fn generate_thumbprint() -> u16 {
@@ -19,7 +19,9 @@ pub trait DimTag {
 pub struct StaticDimTag<const N: usize> {}
 
 impl<const N: usize> DimTag for StaticDimTag<N> {
-    fn get_thumbprint() -> u16 { 0 }
+    fn get_thumbprint() -> u16 {
+        0
+    }
 }
 
 /// A type wrapping an usize value and representing
@@ -32,12 +34,16 @@ pub struct Dim<D: DimTag> {
 impl<D: DimTag> Dim<D> {
     #[doc(hidden)]
     pub unsafe fn unsafe_new(v: usize) -> Self {
-        Dim { phantom: PhantomData {}, v }
+        Dim {
+            phantom: PhantomData {},
+            v,
+        }
     }
 
-    pub fn as_usize(&self) -> usize { self.v }
+    pub fn as_usize(&self) -> usize {
+        self.v
+    }
 }
-
 
 impl<D: DimTag> Debug for Dim<D> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
@@ -56,7 +62,7 @@ impl<D: DimTag> Clone for Dim<D> {
     fn clone(&self) -> Self {
         Dim {
             phantom: PhantomData {},
-            v: self.v
+            v: self.v,
         }
     }
 }
@@ -83,16 +89,23 @@ macro_rules! new_dim {
             static ref THUMBPRINT: u16 = generate_thumbprint();
         }
         impl DimTag for UnnamedTag {
-            fn get_thumbprint() -> u16 { *THUMBPRINT }
+            fn get_thumbprint() -> u16 {
+                *THUMBPRINT
+            }
         }
         unsafe { Dim::<UnnamedTag>::unsafe_new($integer) }
-    }}
+    }};
 }
 
 pub fn new_static_dim<const N: usize>() -> Dim<StaticDimTag<N>> {
-    Dim { phantom: PhantomData {}, v: N }
+    Dim {
+        phantom: PhantomData {},
+        v: N,
+    }
 }
 
 impl<D: DimTag> From<Dim<D>> for usize {
-    fn from(dim: Dim<D>) -> Self { dim.v }
+    fn from(dim: Dim<D>) -> Self {
+        dim.v
+    }
 }

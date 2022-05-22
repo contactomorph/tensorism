@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
-use tensorism::*;
 use tensorism::dimensions::*;
+use tensorism::*;
 
 #[test]
 fn dimensions_are_ok() {
