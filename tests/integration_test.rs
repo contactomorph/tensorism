@@ -42,7 +42,7 @@ fn tensor_equality() {
     assert_eq!(
         format!(
             "〈4~{0:04x}, 4~{0:04x}〉[7, 7, 7, 7 | 7, 7, 7, 7 | 7, 7, …]",
-            d.get_thumbprint()
+            d.get_thumbprint().unwrap()
         ),
         format!("{:?}", c)
     );
@@ -55,7 +55,7 @@ fn building_shape() {
 
     assert_eq!(45, s.count());
     assert_eq!(
-        format!("〈3~{0:04x}, 5, 3~{0:04x}〉", d.get_thumbprint()),
+        format!("〈3~{0:04x}, 5, 3~{0:04x}〉", d.get_thumbprint().unwrap()),
         format!("{:?}", s)
     );
 }

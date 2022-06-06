@@ -18,15 +18,15 @@ pub fn generate_thumbprint() -> u16 {
 /// An abstraction representing a static or dynamic information
 /// about a dimension.
 pub trait DimTag: Eq + Copy {
-    fn get_thumbprint() -> u16;
+    fn get_thumbprint() -> Option<u16>;
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub struct StaticDimTag<const N: usize> {}
 
 impl<const N: usize> DimTag for StaticDimTag<N> {
-    fn get_thumbprint() -> u16 {
-        0
+    fn get_thumbprint() -> Option<u16> {
+        None
     }
 }
 
@@ -51,7 +51,7 @@ impl<T: DimTag> Dim<T> {
         self.v
     }
 
-    pub fn get_thumbprint(&self) -> u16 {
+    pub fn get_thumbprint(&self) -> Option<u16> {
         T::get_thumbprint()
     }
 }
@@ -60,7 +60,7 @@ impl<T: DimTag> Debug for Dim<T> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
         let tp = T::get_thumbprint();
         self.v.fmt(formatter)?;
-        if tp != 0u16 {
+        if let Some(tp) = tp {
             formatter.write_fmt(format_args!("~{:04x}", tp))?;
         }
         Ok(())
@@ -87,8 +87,8 @@ macro_rules! new_dynamic_dim {
             static ref THUMBPRINT: u16 = generate_thumbprint();
         }
         impl DimTag for UnnamedTag {
-            fn get_thumbprint() -> u16 {
-                *THUMBPRINT
+            fn get_thumbprint() -> Option<u16> {
+                Some(*THUMBPRINT)
             }
         }
         unsafe { Dim::<UnnamedTag>::unsafe_new($integer) }
