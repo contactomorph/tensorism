@@ -61,7 +61,7 @@ impl<T: DimTag> Debug for Dim<T> {
         let tp = T::get_thumbprint();
         self.v.fmt(formatter)?;
         if let Some(tp) = tp {
-            formatter.write_fmt(format_args!("~{:04x}", tp))?;
+            formatter.write_fmt(format_args!("\u{2022}{:04x}", tp))?;
         }
         Ok(())
     }
@@ -82,16 +82,16 @@ pub type StaticDim<const N: usize> = Dim<StaticDimTag<N>>;
 macro_rules! new_dynamic_dim {
     ($integer:expr) => {{
         #[derive(PartialEq, Eq, Debug, Clone, Copy)]
-        enum UnnamedTag {}
+        enum DynDimTag {}
         lazy_static::lazy_static! {
             static ref THUMBPRINT: u16 = generate_thumbprint();
         }
-        impl DimTag for UnnamedTag {
+        impl DimTag for DynDimTag {
             fn get_thumbprint() -> Option<u16> {
                 Some(*THUMBPRINT)
             }
         }
-        unsafe { Dim::<UnnamedTag>::unsafe_new($integer) }
+        unsafe { Dim::<DynDimTag>::unsafe_new($integer) }
     }};
 }
 

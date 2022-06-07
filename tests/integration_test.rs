@@ -41,7 +41,7 @@ fn tensor_equality() {
 
     assert_eq!(
         format!(
-            "〈4~{0:04x}, 4~{0:04x}〉[7, 7, 7, 7 | 7, 7, 7, 7 | 7, 7, …]",
+            "〈4•{0:04x}, 4•{0:04x}〉[7, 7, 7, 7 | 7, 7, 7, 7 | 7, 7, …]",
             d.get_thumbprint().unwrap()
         ),
         format!("{:?}", c)
@@ -55,7 +55,7 @@ fn building_shape() {
 
     assert_eq!(45, s.count());
     assert_eq!(
-        format!("〈3~{0:04x}, 5, 3~{0:04x}〉", d.get_thumbprint().unwrap()),
+        format!("〈3•{0:04x}, 5, 3•{0:04x}〉", d.get_thumbprint().unwrap()),
         format!("{:?}", s)
     );
 }
@@ -66,4 +66,26 @@ fn comparing_shapes() {
     let s2 = s1.switch_12();
     assert_eq!(s1, s2);
     assert_ne!(format!("{:?}", s1), format!("{:?}", s2));
+}
+
+#[test]
+fn generate_tensor() {
+    let a = ShapeBuilder::with_static::<3>()
+        .with_static::<5>()
+        .define(|(i, j)| (3 * i + 2 * j) % 7);
+
+    assert_eq!(
+        "〈3, 5〉[0, 2, 4, 6, 1 | 3, 5, 0, 2, 4 | 6, 1, 3, 5, 0]",
+        format!("{:#?}", a)
+    );
+
+    let b = ShapeBuilder::with_static::<3>()
+        .with_static::<2>()
+        .with_static::<2>()
+        .define(|(i, j, k)| (3 * i + 2 * j + 5 * k) % 17);
+
+    assert_eq!(
+        "〈3, 2, 2〉[0, 5 | 2, 7 || 3, 8 | 5, 10 || 6, 11 | 8, 13]",
+        format!("{:#?}", b)
+    );
 }

@@ -1,7 +1,7 @@
 //! The mathematical word tensor is used here more broadly to describe
 //! arrays with multiple indexes containing copiable data.
 
-use crate::shapes::{Shape, Tensor1Shape, Tensor2Shape};
+use crate::shapes::{Shape, Tensor1Shape, Tensor2Shape, Tensor3Shape};
 
 use super::dimensions::*;
 use std::fmt::{Debug, Error, Formatter};
@@ -42,8 +42,9 @@ pub struct Tensor2<T1: DimTag, T2: DimTag, V: Eq + Debug> {
 
 #[derive(PartialEq, Eq)]
 pub struct Tensor3<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> {
-    phantom: PhantomData<(T1, T2, T3)>,
-    #[allow(dead_code)]
+    d1: Dim<T1>,
+    d2: Dim<T2>,
+    d3: Dim<T3>,
     data: Vec<V>,
 }
 
@@ -97,6 +98,18 @@ impl<T1: DimTag, T2: DimTag, V: Eq + Debug> Tensor for Tensor2<T1, T2, V> {
     }
 }
 
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> Tensor for Tensor3<T1, T2, T3, V> {
+    type Element = V;
+    type Dimensions = (Dim<T1>, Dim<T2>, Dim<T3>);
+    const RANK: u16 = 3;
+    fn count(&self) -> u64 {
+        self.data.len() as u64
+    }
+    fn dims(&self) -> Self::Dimensions {
+        (self.d1, self.d2, self.d3)
+    }
+}
+
 impl<V: Clone + Eq + Debug> Clone for Tensor0<V> {
     fn clone(&self) -> Self {
         Tensor0 {
@@ -126,6 +139,8 @@ impl<T1: DimTag, T2: DimTag, V: Clone + Eq + Debug> Clone for Tensor2<T1, T2, V>
     }
 }
 
+const FORMATED_ELEMENT_MAX_COUNT: usize = 10;
+
 impl<V: Eq + Debug> Debug for Tensor0<V> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
         formatter.write_str("\u{3008}\u{3009}[")?;
@@ -134,21 +149,49 @@ impl<V: Eq + Debug> Debug for Tensor0<V> {
     }
 }
 
+#[inline]
+fn display<'a, V: 'a + Debug>(
+    iter: impl Iterator<Item = &'a V>,
+    (d4, d3, d2): (usize, usize, usize),
+    formatter: &mut Formatter<'_>,
+) -> Result<(), Error> {
+    for (i, elt) in iter.enumerate() {
+        if i > 0 {
+            if d4 != 0 && i % d4 == 0 {
+                formatter.write_str(" ||| ")?
+            } else if d3 != 0 && i % d3 == 0 {
+                formatter.write_str(" || ")?
+            } else if d2 != 0 && i % d2 == 0 {
+                formatter.write_str(" | ")?
+            } else {
+                formatter.write_str(", ")?
+            }
+        }
+        elt.fmt(formatter)?;
+    }
+    Ok(())
+}
+
 impl<T: DimTag, V: Eq + Debug> Debug for Tensor1<T, V> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
         let d = unsafe { Dim::<T>::unsafe_new(self.data.len()) };
         formatter.write_str("\u{3008}")?;
         d.fmt(formatter)?;
         formatter.write_str("\u{3009}[")?;
-        let mut first = true;
-        for elt in self.data.iter().take(10) {
-            if first {
-                formatter.write_str(", ")?
-            }
-            elt.fmt(formatter)?;
-            first = false;
+
+        let show_all = formatter.alternate();
+
+        if show_all {
+            display(self.data.iter(), (0, 0, 0), formatter)?
+        } else {
+            display(
+                self.data.iter().take(FORMATED_ELEMENT_MAX_COUNT),
+                (0, 0, 0),
+                formatter,
+            )?
         }
-        if self.data.len() <= 10 {
+
+        if show_all || self.data.len() <= FORMATED_ELEMENT_MAX_COUNT {
             formatter.write_str("]")
         } else {
             formatter.write_str(", \u{2026}]")
@@ -163,19 +206,53 @@ impl<T1: DimTag, T2: DimTag, V: Eq + Debug> Debug for Tensor2<T1, T2, V> {
         formatter.write_str(", ")?;
         self.d2.fmt(formatter)?;
         formatter.write_str("\u{3009}[")?;
-        let mut i = 0usize;
-        for elt in self.data.iter().take(10) {
-            if i > 0 {
-                if i % self.d2.as_usize() == 0 {
-                    formatter.write_str(" | ")?
-                } else {
-                    formatter.write_str(", ")?
-                }
-            }
-            elt.fmt(formatter)?;
-            i += 1
+
+        let show_all = formatter.alternate();
+        let d2 = self.d2.as_usize();
+
+        if show_all {
+            display(self.data.iter(), (0, 0, d2), formatter)?
+        } else {
+            display(
+                self.data.iter().take(FORMATED_ELEMENT_MAX_COUNT),
+                (0, 0, d2),
+                formatter,
+            )?
         }
-        if self.data.len() <= 10 {
+
+        if show_all || self.data.len() <= FORMATED_ELEMENT_MAX_COUNT {
+            formatter.write_str("]")
+        } else {
+            formatter.write_str(", \u{2026}]")
+        }
+    }
+}
+
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> Debug for Tensor3<T1, T2, T3, V> {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
+        formatter.write_str("\u{3008}")?;
+        self.d1.fmt(formatter)?;
+        formatter.write_str(", ")?;
+        self.d2.fmt(formatter)?;
+        formatter.write_str(", ")?;
+        self.d3.fmt(formatter)?;
+        formatter.write_str("\u{3009}[")?;
+
+        let show_all = formatter.alternate();
+        let d2 = self.d2.as_usize();
+        let d3 = self.d3.as_usize() * d2;
+
+        if show_all {
+            display(self.data.iter(), (0, d3, d2), formatter)?
+        } else {
+            display(
+                self.data.iter().take(FORMATED_ELEMENT_MAX_COUNT),
+                (0, d3, d2),
+                formatter,
+            )?
+        }
+
+        if show_all || self.data.len() <= FORMATED_ELEMENT_MAX_COUNT {
             formatter.write_str("]")
         } else {
             formatter.write_str(", \u{2026}]")
@@ -384,14 +461,49 @@ impl<T1: DimTag, T2: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor2Shape<T1
     }
     fn define(&self, mut f: impl FnMut(Self::Indices) -> V) -> Self::Tensor {
         let mut data = Vec::<V>::with_capacity(self.count());
-        for i in 0..self.d1.as_usize() {
-            for j in 0..self.d2.as_usize() {
-                data.push(f((i, j)));
+        for i1 in 0..self.d1.as_usize() {
+            for i2 in 0..self.d2.as_usize() {
+                data.push(f((i1, i2)));
             }
         }
         Self::Tensor {
             d1: self.d1,
             d2: self.d2,
+            data,
+        }
+    }
+}
+
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> TensorBuilder<V>
+    for Tensor3Shape<T1, T2, T3>
+{
+    type Tensor = Tensor3<T1, T2, T3, V>;
+    type Indices = (usize, usize, usize);
+
+    fn fill(&self, value: &V) -> Self::Tensor
+    where
+        V: Clone,
+    {
+        Self::Tensor {
+            d1: self.d1,
+            d2: self.d2,
+            d3: self.d3,
+            data: vec![value.clone(); self.count()],
+        }
+    }
+    fn define(&self, mut f: impl FnMut(Self::Indices) -> V) -> Self::Tensor {
+        let mut data = Vec::<V>::with_capacity(self.count());
+        for i1 in 0..self.d1.as_usize() {
+            for i2 in 0..self.d2.as_usize() {
+                for i3 in 0..self.d3.as_usize() {
+                    data.push(f((i1, i2, i3)));
+                }
+            }
+        }
+        Self::Tensor {
+            d1: self.d1,
+            d2: self.d2,
+            d3: self.d3,
             data,
         }
     }
