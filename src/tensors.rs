@@ -8,9 +8,9 @@ use std::fmt::{Debug, Error, Formatter};
 use std::marker::{Copy, PhantomData};
 
 /// A general trait shared by all tensor types.
-pub trait Tensor: Eq {
+pub trait Tensor: PartialEq {
     /// The type of elements stored in the tensor.
-    type Element: Eq + Debug;
+    type Element: PartialEq + Debug;
     /// The type of the dimensions tuple
     type Dimensions: Copy + Eq + Debug;
     /// The number of dimensions, also corresponding
@@ -22,34 +22,34 @@ pub trait Tensor: Eq {
     fn dims(&self) -> Self::Dimensions;
 }
 
-#[derive(PartialEq, Eq)]
-pub struct Tensor0<V: Eq + Debug> {
+#[derive(PartialEq)]
+pub struct Tensor0<V: PartialEq + Debug> {
     data: V,
 }
 
-#[derive(PartialEq, Eq)]
-pub struct Tensor1<T: DimTag, V: Eq + Debug> {
+#[derive(PartialEq)]
+pub struct Tensor1<T: DimTag, V: PartialEq + Debug> {
     phantom: PhantomData<T>,
     data: Vec<V>,
 }
 
-#[derive(PartialEq, Eq)]
-pub struct Tensor2<T1: DimTag, T2: DimTag, V: Eq + Debug> {
+#[derive(PartialEq)]
+pub struct Tensor2<T1: DimTag, T2: DimTag, V: PartialEq + Debug> {
     d1: Dim<T1>,
     d2: Dim<T2>,
     data: Vec<V>,
 }
 
-#[derive(PartialEq, Eq)]
-pub struct Tensor3<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> {
+#[derive(PartialEq)]
+pub struct Tensor3<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> {
     d1: Dim<T1>,
     d2: Dim<T2>,
     d3: Dim<T3>,
     data: Vec<V>,
 }
 
-#[derive(PartialEq, Eq)]
-pub struct Tensor4<T1: DimTag, T2: DimTag, T3: DimTag, T4: DimTag, V: Eq + Debug> {
+#[derive(PartialEq)]
+pub struct Tensor4<T1: DimTag, T2: DimTag, T3: DimTag, T4: DimTag, V: PartialEq + Debug> {
     phantom: PhantomData<(T1, T2, T3, T4)>,
     #[allow(dead_code)]
     data: Vec<V>,
@@ -63,7 +63,7 @@ pub type StaticVector<const N: usize, V> = Tensor1<StaticDimTag<N>, V>;
 pub type StaticMatrix<const N1: usize, const N2: usize, V> =
     Tensor2<StaticDimTag<N1>, StaticDimTag<N2>, V>;
 
-impl<V: Eq + Debug> Tensor for Tensor0<V> {
+impl<V: PartialEq + Debug> Tensor for Tensor0<V> {
     type Element = V;
     type Dimensions = ();
     const RANK: u16 = 0;
@@ -73,7 +73,7 @@ impl<V: Eq + Debug> Tensor for Tensor0<V> {
     fn dims(&self) -> Self::Dimensions {}
 }
 
-impl<T: DimTag, V: Eq + Debug> Tensor for Tensor1<T, V> {
+impl<T: DimTag, V: PartialEq + Debug> Tensor for Tensor1<T, V> {
     type Element = V;
     type Dimensions = (Dim<T>,);
     const RANK: u16 = 1;
@@ -86,7 +86,7 @@ impl<T: DimTag, V: Eq + Debug> Tensor for Tensor1<T, V> {
     }
 }
 
-impl<T1: DimTag, T2: DimTag, V: Eq + Debug> Tensor for Tensor2<T1, T2, V> {
+impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor for Tensor2<T1, T2, V> {
     type Element = V;
     type Dimensions = (Dim<T1>, Dim<T2>);
     const RANK: u16 = 2;
@@ -98,7 +98,7 @@ impl<T1: DimTag, T2: DimTag, V: Eq + Debug> Tensor for Tensor2<T1, T2, V> {
     }
 }
 
-impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> Tensor for Tensor3<T1, T2, T3, V> {
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Tensor for Tensor3<T1, T2, T3, V> {
     type Element = V;
     type Dimensions = (Dim<T1>, Dim<T2>, Dim<T3>);
     const RANK: u16 = 3;
@@ -141,7 +141,7 @@ impl<T1: DimTag, T2: DimTag, V: Clone + Eq + Debug> Clone for Tensor2<T1, T2, V>
 
 const FORMATED_ELEMENT_MAX_COUNT: usize = 10;
 
-impl<V: Eq + Debug> Debug for Tensor0<V> {
+impl<V: PartialEq + Debug> Debug for Tensor0<V> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
         formatter.write_str("\u{3008}\u{3009}[")?;
         self.data.fmt(formatter)?;
@@ -172,7 +172,7 @@ fn display<'a, V: 'a + Debug>(
     Ok(())
 }
 
-impl<T: DimTag, V: Eq + Debug> Debug for Tensor1<T, V> {
+impl<T: DimTag, V: PartialEq + Debug> Debug for Tensor1<T, V> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
         let d = unsafe { Dim::<T>::unsafe_new(self.data.len()) };
         formatter.write_str("\u{3008}")?;
@@ -199,7 +199,7 @@ impl<T: DimTag, V: Eq + Debug> Debug for Tensor1<T, V> {
     }
 }
 
-impl<T1: DimTag, T2: DimTag, V: Eq + Debug> Debug for Tensor2<T1, T2, V> {
+impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Debug for Tensor2<T1, T2, V> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
         formatter.write_str("\u{3008}")?;
         self.d1.fmt(formatter)?;
@@ -228,7 +228,7 @@ impl<T1: DimTag, T2: DimTag, V: Eq + Debug> Debug for Tensor2<T1, T2, V> {
     }
 }
 
-impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> Debug for Tensor3<T1, T2, T3, V> {
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Debug for Tensor3<T1, T2, T3, V> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
         formatter.write_str("\u{3008}")?;
         self.d1.fmt(formatter)?;
@@ -260,7 +260,7 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> Debug for Tensor3<T1, T2
     }
 }
 
-impl<V: Eq + Debug> Tensor0<V> {
+impl<V: PartialEq + Debug> Tensor0<V> {
     pub fn new(value: V) -> Self {
         Tensor0::<V> { data: value }
     }
@@ -269,7 +269,7 @@ impl<V: Eq + Debug> Tensor0<V> {
     }
 }
 
-impl<T: DimTag, V: Eq + Debug> Tensor1<T, V> {
+impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
     pub fn get(&self, i: usize) -> &V {
         &self.data[i]
     }
@@ -334,7 +334,7 @@ impl<T: DimTag, V: Eq + Debug> Tensor1<T, V> {
     }
 }
 
-impl<T: DimTag, V: Eq + Debug> Tensor1<T, V> {
+impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
     pub fn try_cast<DPrime: DimTag>(self, d: Dim<DPrime>) -> Result<Tensor1<DPrime, V>, Self> {
         if self.data.len() == d.as_usize() {
             Ok(Tensor1::<DPrime, V> {
@@ -347,7 +347,7 @@ impl<T: DimTag, V: Eq + Debug> Tensor1<T, V> {
     }
 }
 
-impl<T1: DimTag, T2: DimTag, V: Eq + Debug> Tensor2<T1, T2, V> {
+impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor2<T1, T2, V> {
     pub unsafe fn get(&self, i1: usize, i2: usize) -> &V {
         if i1 >= self.d1.as_usize() || i2 >= self.d2.as_usize() {
             panic!("Incorrect index")
@@ -464,7 +464,7 @@ pub trait TensorBuilder<V> {
     fn prepare(&self) -> TensorPreparation<Self::Tensor>;
 }
 
-impl<T: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
+impl<T: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
     type Tensor = Tensor1<T, V>;
     type Indices = usize;
 
@@ -500,7 +500,7 @@ impl<T: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
     }
 }
 
-impl<T1: DimTag, T2: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor2Shape<T1, T2> {
+impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor2Shape<T1, T2> {
     type Tensor = Tensor2<T1, T2, V>;
     type Indices = (usize, usize);
 
@@ -541,7 +541,7 @@ impl<T1: DimTag, T2: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor2Shape<T1
     }
 }
 
-impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> TensorBuilder<V>
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> TensorBuilder<V>
     for Tensor3Shape<T1, T2, T3>
 {
     type Tensor = Tensor3<T1, T2, T3, V>;
