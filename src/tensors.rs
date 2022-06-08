@@ -6,13 +6,16 @@ use crate::shapes::{Shape, Tensor1Shape, Tensor2Shape, Tensor3Shape};
 use super::dimensions::*;
 use std::fmt::{Debug, Error, Formatter};
 use std::marker::{Copy, PhantomData};
+use std::ops::Index;
 
 /// A general trait shared by all tensor types.
-pub trait Tensor: PartialEq {
+pub trait Tensor: PartialEq + Index<Self::MultiIndex> + Debug {
     /// The type of elements stored in the tensor.
     type Element: PartialEq + Debug;
     /// The type of the dimensions tuple
     type Dimensions: Copy + Eq + Debug;
+    // the type of a multi-index to retrieve an element
+    type MultiIndex: Copy + Eq + Debug;
     /// The number of dimensions, also corresponding
     /// to the number of indexes.
     const RANK: u16;
@@ -20,6 +23,8 @@ pub trait Tensor: PartialEq {
     fn count(&self) -> u64;
     /// The tuple of dimensions
     fn dims(&self) -> Self::Dimensions;
+    /// Update some elements of the tensor
+    fn update(&mut self, updater: impl FnMut(Self::MultiIndex, &mut Self::Element));
 }
 
 #[derive(PartialEq)]
@@ -66,16 +71,21 @@ pub type StaticMatrix<const N1: usize, const N2: usize, V> =
 impl<V: PartialEq + Debug> Tensor for Tensor0<V> {
     type Element = V;
     type Dimensions = ();
+    type MultiIndex = ();
     const RANK: u16 = 0;
     fn count(&self) -> u64 {
         1
     }
     fn dims(&self) -> Self::Dimensions {}
+    fn update(&mut self, mut updater: impl FnMut((), &mut V)) {
+        updater((), &mut self.data)
+    }
 }
 
 impl<T: DimTag, V: PartialEq + Debug> Tensor for Tensor1<T, V> {
     type Element = V;
     type Dimensions = (Dim<T>,);
+    type MultiIndex = (usize,);
     const RANK: u16 = 1;
     fn count(&self) -> u64 {
         self.data.len() as u64
@@ -84,11 +94,17 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor for Tensor1<T, V> {
         let n = self.data.len();
         unsafe { (Dim::<T>::unsafe_new(n),) }
     }
+    fn update(&mut self, mut updater: impl FnMut((usize,), &mut V)) {
+        for (i, element) in self.data.iter_mut().enumerate() {
+            updater((i,), element)
+        }
+    }
 }
 
 impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor for Tensor2<T1, T2, V> {
     type Element = V;
     type Dimensions = (Dim<T1>, Dim<T2>);
+    type MultiIndex = (usize, usize);
     const RANK: u16 = 2;
     fn count(&self) -> u64 {
         self.data.len() as u64
@@ -96,17 +112,37 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor for Tensor2<T1, T2, V>
     fn dims(&self) -> Self::Dimensions {
         (self.d1, self.d2)
     }
+    fn update(&mut self, mut updater: impl FnMut((usize, usize), &mut V)) {
+        let d2 = self.d2.as_usize();
+        for (i, element) in self.data.iter_mut().enumerate() {
+            let i1 = i / d2;
+            let i2 = i % d2;
+            updater((i1, i2), element)
+        }
+    }
 }
 
 impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Tensor for Tensor3<T1, T2, T3, V> {
     type Element = V;
     type Dimensions = (Dim<T1>, Dim<T2>, Dim<T3>);
+    type MultiIndex = (usize, usize, usize);
     const RANK: u16 = 3;
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
     fn dims(&self) -> Self::Dimensions {
         (self.d1, self.d2, self.d3)
+    }
+    fn update(&mut self, mut updater: impl FnMut((usize, usize, usize), &mut V)) {
+        let d2 = self.d2.as_usize();
+        let d3 = self.d3.as_usize();
+        for (i, element) in self.data.iter_mut().enumerate() {
+            let i3 = i % d3;
+            let i12 = i / d3;
+            let i1 = i12 / d2;
+            let i2 = i12 % d2;
+            updater((i1, i2, i3), element)
+        }
     }
 }
 
@@ -257,6 +293,47 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Debug for Tensor3
         } else {
             formatter.write_str(", \u{2026}]")
         }
+    }
+}
+
+impl<V: PartialEq + Debug> Index<()> for Tensor0<V> {
+    type Output = V;
+    fn index(&self, _index: ()) -> &Self::Output {
+        &self.data
+    }
+}
+
+impl<T: DimTag, V: PartialEq + Debug> Index<(usize,)> for Tensor1<T, V> {
+    type Output = V;
+    fn index(&self, index: (usize,)) -> &Self::Output {
+        &self.data[index.0]
+    }
+}
+
+impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Index<(usize, usize)> for Tensor2<T1, T2, V> {
+    type Output = V;
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        if self.d1.as_usize() <= index.0 || self.d2.as_usize() <= index.1 {
+            panic!("Invalid index")
+        }
+        let index = index.0 * self.d2.as_usize() + index.1;
+        unsafe { &self.data.get_unchecked(index) }
+    }
+}
+
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Index<(usize, usize, usize)>
+    for Tensor3<T1, T2, T3, V>
+{
+    type Output = V;
+    fn index(&self, index: (usize, usize, usize)) -> &Self::Output {
+        if self.d1.as_usize() <= index.0
+            || self.d2.as_usize() <= index.1
+            || self.d3.as_usize() <= index.2
+        {
+            panic!("Invalid index")
+        }
+        let index = (index.0 * self.d2.as_usize() + index.1) * self.d3.as_usize() + index.2;
+        unsafe { &self.data.get_unchecked(index) }
     }
 }
 
@@ -456,17 +533,17 @@ impl<T: Tensor> TensorPreparation<T> {
 
 pub trait TensorBuilder<V> {
     type Tensor: Tensor;
-    type Indices;
+    type MultiIndex: Eq + Debug + Copy;
     fn fill(&self, value: &V) -> Self::Tensor
     where
         V: Clone;
-    fn define(&self, f: impl FnMut(Self::Indices) -> V) -> Self::Tensor;
+    fn define(&self, f: impl FnMut(Self::MultiIndex) -> V) -> Self::Tensor;
     fn prepare(&self) -> TensorPreparation<Self::Tensor>;
 }
 
 impl<T: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
     type Tensor = Tensor1<T, V>;
-    type Indices = usize;
+    type MultiIndex = usize;
 
     fn fill(&self, value: &V) -> Self::Tensor
     where
@@ -477,7 +554,7 @@ impl<T: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
             data: vec![value.clone(); self.count()],
         }
     }
-    fn define(&self, mut f: impl FnMut(Self::Indices) -> V) -> Self::Tensor {
+    fn define(&self, mut f: impl FnMut(Self::MultiIndex) -> V) -> Self::Tensor {
         let mut data = Vec::<V>::with_capacity(self.d.as_usize());
         for i in 0..self.d.as_usize() {
             data.push(f(i))
@@ -502,7 +579,7 @@ impl<T: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
 
 impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor2Shape<T1, T2> {
     type Tensor = Tensor2<T1, T2, V>;
-    type Indices = (usize, usize);
+    type MultiIndex = (usize, usize);
 
     fn fill(&self, value: &V) -> Self::Tensor
     where
@@ -514,7 +591,7 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor2S
             data: vec![value.clone(); self.count()],
         }
     }
-    fn define(&self, mut f: impl FnMut(Self::Indices) -> V) -> Self::Tensor {
+    fn define(&self, mut f: impl FnMut(Self::MultiIndex) -> V) -> Self::Tensor {
         let mut data = Vec::<V>::with_capacity(self.count());
         for i1 in 0..self.d1.as_usize() {
             for i2 in 0..self.d2.as_usize() {
@@ -545,7 +622,7 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> TensorBuilder<V>
     for Tensor3Shape<T1, T2, T3>
 {
     type Tensor = Tensor3<T1, T2, T3, V>;
-    type Indices = (usize, usize, usize);
+    type MultiIndex = (usize, usize, usize);
 
     fn fill(&self, value: &V) -> Self::Tensor
     where
@@ -558,7 +635,7 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> TensorBuilder<V>
             data: vec![value.clone(); self.count()],
         }
     }
-    fn define(&self, mut f: impl FnMut(Self::Indices) -> V) -> Self::Tensor {
+    fn define(&self, mut f: impl FnMut(Self::MultiIndex) -> V) -> Self::Tensor {
         let mut data = Vec::<V>::with_capacity(self.count());
         for i1 in 0..self.d1.as_usize() {
             for i2 in 0..self.d2.as_usize() {

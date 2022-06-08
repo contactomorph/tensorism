@@ -1,7 +1,7 @@
 use std::any::Any;
 use tensorism::dimensions::*;
 use tensorism::shapes::{Shape, ShapeBuilder};
-use tensorism::tensors::{StaticMatrix, TensorBuilder};
+use tensorism::tensors::{StaticMatrix, TensorBuilder, Tensor};
 use tensorism::*;
 
 #[test]
@@ -78,6 +78,20 @@ fn generate_tensor() {
         "〈3, 5〉[0, 2, 4, 6, 1 | 3, 5, 0, 2, 4 | 6, 1, 3, 5, 0]",
         format!("{:#?}", a)
     );
+    assert_eq!(6, a[(0, 3)]);
+    assert_eq!(4, a[(1, 4)]);
+    assert_eq!(1, a[(2, 1)]);
+
+    let mut a = a;
+    a.update(|(i, j), element| {
+        if i == j {
+            *element = 110
+        }
+    });
+    assert_eq!(110, a[(0, 0)]);
+    assert_eq!(110, a[(1, 1)]);
+    assert_eq!(110, a[(2, 2)]);
+
     let shape = ShapeBuilder::with_static::<3>()
         .with_static::<2>()
         .with_static::<2>();
@@ -93,6 +107,9 @@ fn generate_tensor() {
         .prepare()
         .append(&mut vec![0, 5, 2, 7, 3, 8, 5, 10, 6, 11, 8, 13])
         .generate();
-        
+
     assert_eq!(b, c);
+    assert_eq!(7, c[(0, 1, 1)]);
+    assert_eq!(5, c[(1, 1, 0)]);
+    assert_eq!(11, c[(2, 0, 1)]);
 }
