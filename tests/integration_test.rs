@@ -78,14 +78,21 @@ fn generate_tensor() {
         "〈3, 5〉[0, 2, 4, 6, 1 | 3, 5, 0, 2, 4 | 6, 1, 3, 5, 0]",
         format!("{:#?}", a)
     );
+    let shape = ShapeBuilder::with_static::<3>()
+        .with_static::<2>()
+        .with_static::<2>();
 
-    let b = ShapeBuilder::with_static::<3>()
-        .with_static::<2>()
-        .with_static::<2>()
-        .define(|(i, j, k)| (3 * i + 2 * j + 5 * k) % 17);
+    let b = shape.define(|(i, j, k)| (3 * i + 2 * j + 5 * k) % 17);
 
     assert_eq!(
         "〈3, 2, 2〉[0, 5 | 2, 7 || 3, 8 | 5, 10 || 6, 11 | 8, 13]",
         format!("{:#?}", b)
     );
+
+    let c = shape
+        .prepare()
+        .append(&mut vec![0, 5, 2, 7, 3, 8, 5, 10, 6, 11, 8, 13])
+        .generate();
+        
+    assert_eq!(b, c);
 }

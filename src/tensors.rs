@@ -411,6 +411,49 @@ macro_rules! from_array_to_tensor1 {
     }};
 }
 
+pub struct TensorPreparation<T: Tensor> {
+    expected_size: usize,
+    dims: T::Dimensions,
+    data: Vec<T::Element>,
+    generator: fn(T::Dimensions, Vec<T::Element>) -> T,
+}
+
+impl<T: Tensor> TensorPreparation<T> {
+    pub fn count_set_elements(&self) -> usize {
+        self.data.len()
+    }
+    pub fn count_unset_elements(&self) -> usize {
+        self.expected_size - self.data.len()
+    }
+    pub fn append(mut self, values: &mut Vec<T::Element>) -> Self {
+        self.data.append(values);
+        self.data.truncate(self.expected_size);
+        self
+    }
+    pub fn fill(mut self, value: &T::Element) -> T
+    where
+        T::Element: Clone,
+    {
+        let missing_elements_count = self.expected_size - self.data.len();
+        self.data
+            .append(&mut vec![value.clone(); missing_elements_count]);
+        self.generate()
+    }
+    pub fn generate(self) -> T {
+        if self.data.len() != self.expected_size {
+            panic!("Invalid size")
+        }
+        (self.generator)(self.dims, self.data)
+    }
+    pub fn try_generate(self) -> Result<T, Self> {
+        if self.data.len() != self.expected_size {
+            Err(self)
+        } else {
+            Ok((self.generator)(self.dims, self.data))
+        }
+    }
+}
+
 pub trait TensorBuilder<V> {
     type Tensor: Tensor;
     type Indices;
@@ -418,6 +461,7 @@ pub trait TensorBuilder<V> {
     where
         V: Clone;
     fn define(&self, f: impl FnMut(Self::Indices) -> V) -> Self::Tensor;
+    fn prepare(&self) -> TensorPreparation<Self::Tensor>;
 }
 
 impl<T: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
@@ -441,6 +485,17 @@ impl<T: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
         Self::Tensor {
             phantom: PhantomData,
             data,
+        }
+    }
+    fn prepare(&self) -> TensorPreparation<Self::Tensor> {
+        TensorPreparation {
+            expected_size: self.count(),
+            data: Vec::<V>::with_capacity(self.count()),
+            dims: (self.d,),
+            generator: |_dims, data| Self::Tensor {
+                phantom: PhantomData,
+                data,
+            },
         }
     }
 }
@@ -470,6 +525,18 @@ impl<T1: DimTag, T2: DimTag, V: Eq + Debug> TensorBuilder<V> for Tensor2Shape<T1
             d1: self.d1,
             d2: self.d2,
             data,
+        }
+    }
+    fn prepare(&self) -> TensorPreparation<Self::Tensor> {
+        TensorPreparation {
+            expected_size: self.count(),
+            data: Vec::<V>::with_capacity(self.count()),
+            dims: (self.d1, self.d2),
+            generator: |dims, data| Self::Tensor {
+                d1: dims.0,
+                d2: dims.1,
+                data,
+            },
         }
     }
 }
@@ -505,6 +572,19 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: Eq + Debug> TensorBuilder<V>
             d2: self.d2,
             d3: self.d3,
             data,
+        }
+    }
+    fn prepare(&self) -> TensorPreparation<Self::Tensor> {
+        TensorPreparation {
+            expected_size: self.count(),
+            data: Vec::<V>::with_capacity(self.count()),
+            dims: (self.d1, self.d2, self.d3),
+            generator: |dims, data| Self::Tensor {
+                d1: dims.0,
+                d2: dims.1,
+                d3: dims.2,
+                data,
+            },
         }
     }
 }
