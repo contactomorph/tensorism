@@ -146,7 +146,7 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Tensor for Tensor
     }
 }
 
-impl<V: Clone + Eq + Debug> Clone for Tensor0<V> {
+impl<V: Clone + PartialEq + Debug> Clone for Tensor0<V> {
     fn clone(&self) -> Self {
         Tensor0 {
             data: self.data.clone(),
@@ -154,9 +154,9 @@ impl<V: Clone + Eq + Debug> Clone for Tensor0<V> {
     }
 }
 
-impl<V: Copy + Eq + Debug> Copy for Tensor0<V> {}
+impl<V: Copy + PartialEq + Debug> Copy for Tensor0<V> {}
 
-impl<T: DimTag, V: Clone + Eq + Debug> Clone for Tensor1<T, V> {
+impl<T: DimTag, V: Clone + PartialEq + Debug> Clone for Tensor1<T, V> {
     fn clone(&self) -> Self {
         Tensor1 {
             phantom: PhantomData {},
@@ -165,7 +165,7 @@ impl<T: DimTag, V: Clone + Eq + Debug> Clone for Tensor1<T, V> {
     }
 }
 
-impl<T1: DimTag, T2: DimTag, V: Clone + Eq + Debug> Clone for Tensor2<T1, T2, V> {
+impl<T1: DimTag, T2: DimTag, V: Clone + PartialEq + Debug> Clone for Tensor2<T1, T2, V> {
     fn clone(&self) -> Self {
         Tensor2 {
             d1: self.d1,
@@ -374,7 +374,7 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
             data: values,
         }
     }
-    pub fn set___<VInput: Eq + Debug>(
+    pub fn set___<VInput: PartialEq + Debug>(
         &mut self,
         input: &Tensor1<T, VInput>,
         mut f: impl FnMut(&VInput) -> V,
@@ -388,7 +388,7 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
             }
         }
     }
-    pub fn set_from_2<V1: Eq + Debug, V2: Eq + Debug>(
+    pub fn set_from_2<V1: PartialEq + Debug, V2: PartialEq + Debug>(
         &mut self,
         input1: &Tensor1<T, V1>,
         input2: &Tensor1<T, V2>,
@@ -406,7 +406,7 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
         }
     }
 
-    pub fn map<W: Eq + Debug>(&self, mut _f: impl FnMut(&V) -> W) -> Tensor1<T, W> {
+    pub fn map<W: PartialEq + Debug>(&self, mut _f: impl FnMut(&V) -> W) -> Tensor1<T, W> {
         panic!("not impl")
     }
 }
@@ -454,7 +454,7 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor2<T1, T2, V> {
 }
 
 #[doc(hidden)]
-pub unsafe fn from_array_to_tensor1_unchecked<T: DimTag, V: Copy + Eq + Debug>(
+pub unsafe fn from_array_to_tensor1_unchecked<T: DimTag, V: Copy + PartialEq + Debug>(
     values: Vec<V>,
 ) -> Tensor1<T, V> {
     Tensor1::<T, V> {
@@ -463,7 +463,7 @@ pub unsafe fn from_array_to_tensor1_unchecked<T: DimTag, V: Copy + Eq + Debug>(
     }
 }
 
-pub fn from_array<V: Copy + Eq + Debug, const N: usize>(
+pub fn from_array<V: Copy + PartialEq + Debug, const N: usize>(
     array: &[V; N],
 ) -> Tensor1<StaticDimTag<N>, V> {
     Tensor1::<StaticDimTag<N>, V> {
