@@ -1,7 +1,8 @@
 use std::any::Any;
 use tensorism::dimensions::*;
 use tensorism::shapes::{Shape, ShapeBuilder};
-use tensorism::tensors::{StaticMatrix, TensorBuilder, Tensor};
+use tensorism::tensors::{StaticMatrix, Tensor};
+use tensorism::building::{TensorBuilder};
 use tensorism::*;
 
 #[test]
