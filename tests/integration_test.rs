@@ -105,7 +105,7 @@ fn generate_tensor() {
 
     let c = shape
         .prepare()
-        .append(&mut vec![0, 5, 2, 7, 3, 8, 5, 10, 6, 11, 8, 13])
+        .append_vec(&mut vec![0, 5, 2, 7, 3, 8, 5, 10, 6, 11, 8, 13])
         .generate();
 
     assert_eq!(b, c);

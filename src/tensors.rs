@@ -6,10 +6,10 @@ use crate::shapes::{Shape, Tensor1Shape, Tensor2Shape, Tensor3Shape};
 use super::dimensions::*;
 use std::fmt::{Debug, Error, Formatter};
 use std::marker::{Copy, PhantomData};
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 /// A general trait shared by all tensor types.
-pub trait Tensor: PartialEq + Index<Self::MultiIndex> + Debug {
+pub trait Tensor: PartialEq + Index<Self::MultiIndex> + IndexMut<Self::MultiIndex> + Debug {
     /// The type of elements stored in the tensor.
     type Element: PartialEq + Debug;
     /// The type of the dimensions tuple
@@ -303,10 +303,22 @@ impl<V: PartialEq + Debug> Index<()> for Tensor0<V> {
     }
 }
 
+impl<V: PartialEq + Debug> IndexMut<()> for Tensor0<V> {
+    fn index_mut(&mut self, _index: ()) -> &mut Self::Output {
+        &mut self.data
+    }
+}
+
 impl<T: DimTag, V: PartialEq + Debug> Index<(usize,)> for Tensor1<T, V> {
     type Output = V;
     fn index(&self, index: (usize,)) -> &Self::Output {
         &self.data[index.0]
+    }
+}
+
+impl<T: DimTag, V: PartialEq + Debug> IndexMut<(usize,)> for Tensor1<T, V> {
+    fn index_mut(&mut self, index: (usize,)) -> &mut Self::Output {
+        &mut self.data[index.0]
     }
 }
 
@@ -318,6 +330,16 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Index<(usize, usize)> for Ten
         }
         let index = index.0 * self.d2.as_usize() + index.1;
         unsafe { &self.data.get_unchecked(index) }
+    }
+}
+
+impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> IndexMut<(usize, usize)> for Tensor2<T1, T2, V> {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        if self.d1.as_usize() <= index.0 || self.d2.as_usize() <= index.1 {
+            panic!("Invalid index")
+        }
+        let index = index.0 * self.d2.as_usize() + index.1;
+        unsafe { self.data.get_unchecked_mut(index) }
     }
 }
 
@@ -337,6 +359,21 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Index<(usize, usi
     }
 }
 
+impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> IndexMut<(usize, usize, usize)>
+    for Tensor3<T1, T2, T3, V>
+{
+    fn index_mut(&mut self, index: (usize, usize, usize)) -> &mut Self::Output {
+        if self.d1.as_usize() <= index.0
+            || self.d2.as_usize() <= index.1
+            || self.d3.as_usize() <= index.2
+        {
+            panic!("Invalid index")
+        }
+        let index = (index.0 * self.d2.as_usize() + index.1) * self.d3.as_usize() + index.2;
+        unsafe { self.data.get_unchecked_mut(index) }
+    }
+}
+
 impl<V: PartialEq + Debug> Tensor0<V> {
     pub fn new(value: V) -> Self {
         Tensor0::<V> { data: value }
@@ -347,21 +384,8 @@ impl<V: PartialEq + Debug> Tensor0<V> {
 }
 
 impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
-    pub fn get(&self, i: usize) -> &V {
-        &self.data[i]
-    }
-
     pub unsafe fn get_unchecked(&self, i: usize) -> &V {
         self.data.get_unchecked(i)
-    }
-
-    pub fn set(&mut self, i: usize, value: V) {
-        self.data[i] = value
-    }
-
-    pub unsafe fn set_unchecked(&mut self, _i: usize, _value: V) {
-        //self.data.get_unchecked_mut(index) = value
-        panic!("")
     }
 
     pub fn from_vector_with_dim(d: Dim<T>, mut values: Vec<V>) -> Self {
@@ -373,41 +397,6 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
             phantom: PhantomData {},
             data: values,
         }
-    }
-    pub fn set___<VInput: PartialEq + Debug>(
-        &mut self,
-        input: &Tensor1<T, VInput>,
-        mut f: impl FnMut(&VInput) -> V,
-    ) {
-        let ptr_o = self.data.as_mut_ptr();
-        let ptr = input.data.as_ptr();
-        for i in 0usize..self.data.len() {
-            unsafe {
-                let ptr = ptr.add(i);
-                *ptr_o.add(i) = f(&*ptr);
-            }
-        }
-    }
-    pub fn set_from_2<V1: PartialEq + Debug, V2: PartialEq + Debug>(
-        &mut self,
-        input1: &Tensor1<T, V1>,
-        input2: &Tensor1<T, V2>,
-        mut f: impl FnMut(&V1, &V2) -> V,
-    ) {
-        let ptr_o = self.data.as_mut_ptr();
-        let ptr1 = input1.data.as_ptr();
-        let ptr2 = input2.data.as_ptr();
-        for i in 0usize..self.data.len() {
-            unsafe {
-                let ptr1 = ptr1.add(i);
-                let ptr2 = ptr2.add(i);
-                *ptr_o.add(i) = f(&*ptr1, &*ptr2);
-            }
-        }
-    }
-
-    pub fn map<W: PartialEq + Debug>(&self, mut _f: impl FnMut(&V) -> W) -> Tensor1<T, W> {
-        panic!("not impl")
     }
 }
 
@@ -425,13 +414,6 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
 }
 
 impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor2<T1, T2, V> {
-    pub unsafe fn get(&self, i1: usize, i2: usize) -> &V {
-        if i1 >= self.d1.as_usize() || i2 >= self.d2.as_usize() {
-            panic!("Incorrect index")
-        }
-        self.get_unchecked(i1, i2)
-    }
-
     pub unsafe fn get_unchecked(&self, i1: usize, i2: usize) -> &V {
         self.data.get_unchecked(i1 * self.d2.as_usize() + i2)
     }
@@ -454,7 +436,7 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor2<T1, T2, V> {
 }
 
 #[doc(hidden)]
-pub unsafe fn from_array_to_tensor1_unchecked<T: DimTag, V: Copy + PartialEq + Debug>(
+pub unsafe fn from_vec_to_tensor1_unchecked<T: DimTag, V: Copy + PartialEq + Debug>(
     values: Vec<V>,
 ) -> Tensor1<T, V> {
     Tensor1::<T, V> {
@@ -473,7 +455,7 @@ pub fn from_array<V: Copy + PartialEq + Debug, const N: usize>(
 }
 
 #[macro_export]
-macro_rules! from_array_to_tensor1 {
+macro_rules! from_vec_to_tensor1 {
     ($values:expr) => {{
         enum UnnamedTag {}
         lazy_static::lazy_static! {
@@ -484,7 +466,7 @@ macro_rules! from_array_to_tensor1 {
                 *THUMBPRINT
             }
         }
-        unsafe { from_array_to_tensor1_unchecked::<UnnamedTag, _>($values) }
+        unsafe { from_vec_to_tensor1_unchecked::<UnnamedTag, _>($values) }
     }};
 }
 
@@ -502,8 +484,13 @@ impl<T: Tensor> TensorPreparation<T> {
     pub fn count_unset_elements(&self) -> usize {
         self.expected_size - self.data.len()
     }
-    pub fn append(mut self, values: &mut Vec<T::Element>) -> Self {
+    pub fn append_vec(mut self, values: &mut Vec<T::Element>) -> Self {
         self.data.append(values);
+        self.data.truncate(self.expected_size);
+        self
+    }
+    pub fn append_array<const N: usize>(mut self, values: [T::Element; N]) -> Self {
+        self.data.append(&mut Vec::<_>::from(values));
         self.data.truncate(self.expected_size);
         self
     }
@@ -515,6 +502,15 @@ impl<T: Tensor> TensorPreparation<T> {
         self.data
             .append(&mut vec![value.clone(); missing_elements_count]);
         self.generate()
+    }
+    pub fn fill_during(mut self, value: &T::Element, additional_count: usize) -> Self
+    where
+        T::Element: Clone,
+    {
+        let missing_elements_count = (self.expected_size - self.data.len()).min(additional_count);
+        self.data
+            .append(&mut vec![value.clone(); missing_elements_count]);
+        self
     }
     pub fn generate(self) -> T {
         if self.data.len() != self.expected_size {
