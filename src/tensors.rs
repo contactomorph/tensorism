@@ -432,38 +432,3 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor2<T1, T2, V> {
         }
     }
 }
-
-#[doc(hidden)]
-pub unsafe fn from_vec_to_tensor1_unchecked<T: DimTag, V: Copy + PartialEq + Debug>(
-    values: Vec<V>,
-) -> Tensor1<T, V> {
-    Tensor1::<T, V> {
-        phantom: PhantomData {},
-        data: values,
-    }
-}
-
-pub fn from_array<V: Copy + PartialEq + Debug, const N: usize>(
-    array: &[V; N],
-) -> Tensor1<StaticDimTag<N>, V> {
-    Tensor1::<StaticDimTag<N>, V> {
-        phantom: PhantomData {},
-        data: array.to_vec(),
-    }
-}
-
-#[macro_export]
-macro_rules! from_vec_to_tensor1 {
-    ($values:expr) => {{
-        enum UnnamedTag {}
-        lazy_static::lazy_static! {
-            static ref THUMBPRINT: u16 = generate_thumbprint();
-        }
-        impl DimTag for UnnamedTag {
-            fn get_thumbprint() -> u16 {
-                *THUMBPRINT
-            }
-        }
-        unsafe { from_vec_to_tensor1_unchecked::<UnnamedTag, _>($values) }
-    }};
-}

@@ -1,8 +1,7 @@
 use std::any::Any;
+use tensorism::building::{Shape, TensorBuilder, TensorBuilding};
 use tensorism::dimensions::*;
-use tensorism::shapes::{Shape, ShapeBuilder};
 use tensorism::tensors::{StaticMatrix, Tensor};
-use tensorism::building::{TensorBuilder};
 use tensorism::*;
 
 #[test]
@@ -33,12 +32,14 @@ fn dimensions_are_ok() {
 #[test]
 fn tensor_equality() {
     let s = "Hello world".to_owned();
-    let a = ShapeBuilder::with_static::<8>().with_static::<8>().fill(&s);
+    let a = TensorBuilding::with_static::<8>()
+        .with_static::<8>()
+        .fill(&s);
     let b: StaticMatrix<8, 8, String> = a.clone();
     assert_eq!(a, b);
 
     let d = new_dynamic_dim!(4);
-    let c = ShapeBuilder::with(d).with_first().fill(&7);
+    let c = TensorBuilding::with(d).with_first().fill(&7);
 
     assert_eq!(
         format!(
@@ -52,7 +53,7 @@ fn tensor_equality() {
 #[test]
 fn building_shape() {
     let d = new_dynamic_dim!(3);
-    let s = ShapeBuilder::with(d).with_static::<5>().with_first();
+    let s = TensorBuilding::with(d).with_static::<5>().with_first();
 
     assert_eq!(45, s.count());
     assert_eq!(
@@ -63,7 +64,7 @@ fn building_shape() {
 
 #[test]
 fn comparing_shapes() {
-    let s1 = ShapeBuilder::with(new_dynamic_dim!(4)).with_static::<4>();
+    let s1 = TensorBuilding::with(new_dynamic_dim!(4)).with_static::<4>();
     let s2 = s1.switch_12();
     assert_eq!(s1, s2);
     assert_ne!(format!("{:?}", s1), format!("{:?}", s2));
@@ -71,7 +72,7 @@ fn comparing_shapes() {
 
 #[test]
 fn generate_tensor() {
-    let a = ShapeBuilder::with_static::<3>()
+    let a = TensorBuilding::with_static::<3>()
         .with_static::<5>()
         .define(|(i, j)| (3 * i + 2 * j) % 7);
 
@@ -93,7 +94,7 @@ fn generate_tensor() {
     assert_eq!(110, a[(1, 1)]);
     assert_eq!(110, a[(2, 2)]);
 
-    let shape = ShapeBuilder::with_static::<3>()
+    let shape = TensorBuilding::with_static::<3>()
         .with_static::<2>()
         .with_static::<2>();
 

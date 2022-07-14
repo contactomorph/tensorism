@@ -73,6 +73,9 @@ impl<TLhs: DimTag, TRhs: DimTag> PartialEq<Dim<TRhs>> for Dim<TLhs> {
     }
 }
 
+#[doc(hidden)]
+pub fn identical<T: DimTag>(_d1: Dim<T>, _d2: Dim<T>) {}
+
 impl<T: DimTag> Eq for Dim<T> {}
 
 /// An alias representing a staticly known dimension
