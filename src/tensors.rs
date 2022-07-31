@@ -882,13 +882,8 @@ impl<
 }
 
 #[inline]
-fn make_index_2((i1, i2): (usize, usize), (d2,): (usize,)) -> usize {
-    i1 * d2 + i2
-}
-
-#[inline]
 fn make_index_3((i1, i2, i3): (usize, usize, usize), (d2, d3): (usize, usize)) -> usize {
-    make_index_2((i1, i2), (d2,)) * d3 + i3
+    (i1 * d2 + i2) * d3 + i3
 }
 
 #[inline]
@@ -963,7 +958,7 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Index<(usize, usize)> for Ten
         if self.d1.as_usize() <= i1 || self.d2.as_usize() <= i2 {
             panic!("Invalid index")
         }
-        let index = make_index_2((i1, i2), (self.d2.as_usize(),));
+        let index = i1 * self.d2.as_usize() + i2;
         unsafe { &self.data.get_unchecked(index) }
     }
 }
@@ -973,7 +968,7 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> IndexMut<(usize, usize)> for 
         if self.d1.as_usize() <= i1 || self.d2.as_usize() <= i2 {
             panic!("Invalid index")
         }
-        let index = make_index_2((i1, i2), (self.d2.as_usize(),));
+        let index = i1 * self.d2.as_usize() + i2;
         unsafe { self.data.get_unchecked_mut(index) }
     }
 }
@@ -1382,7 +1377,7 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor1<T, V> {
 
 impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor2<T1, T2, V> {
     pub unsafe fn get_unchecked(&self, i1: usize, i2: usize) -> &V {
-        let index = make_index_2((i1, i2), (self.d2.as_usize(),));
+        let index = i1 * self.d2.as_usize() + i2;
         self.data.get_unchecked(index)
     }
 
