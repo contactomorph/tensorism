@@ -501,22 +501,6 @@ pub unsafe fn from_vec_to_tensor1_unchecked<T: DimTag, V: Copy + PartialEq + Deb
     }
 }
 
-#[macro_export]
-macro_rules! from_vec_to_tensor1 {
-    ($values:expr) => {{
-        enum UnnamedTag {}
-        lazy_static::lazy_static! {
-            static ref THUMBPRINT: u16 = generate_thumbprint();
-        }
-        impl DimTag for UnnamedTag {
-            fn get_thumbprint() -> u16 {
-                *THUMBPRINT
-            }
-        }
-        unsafe { from_vec_to_tensor1_unchecked::<UnnamedTag, _>($values) }
-    }};
-}
-
 impl<T: DimTag> Tensor1Shape<T> {
     pub fn with_static<const N: usize>(&self) -> Tensor2Shape<T, StaticDimTag<N>> {
         Tensor2Shape {
@@ -1321,9 +1305,9 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, T4: DimTag, T5: DimTag, T6: DimTag, T7:
 
 pub struct TensorPreparation<T: Tensor> {
     expected_size: usize,
-    dims: T::Dimensions,
+    shape: T::Shape,
     data: Vec<T::Element>,
-    generator: fn(T::Dimensions, Vec<T::Element>) -> T,
+    generator: fn(T::Shape, Vec<T::Element>) -> T,
 }
 
 impl<T: Tensor> TensorPreparation<T> {
@@ -1365,13 +1349,13 @@ impl<T: Tensor> TensorPreparation<T> {
         if self.data.len() != self.expected_size {
             panic!("Invalid size")
         }
-        (self.generator)(self.dims, self.data)
+        (self.generator)(self.shape, self.data)
     }
     pub fn try_generate(self) -> Result<T, Self> {
         if self.data.len() != self.expected_size {
             Err(self)
         } else {
-            Ok((self.generator)(self.dims, self.data))
+            Ok((self.generator)(self.shape, self.data))
         }
     }
 }
@@ -1413,7 +1397,7 @@ impl<T: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
         TensorPreparation {
             expected_size: self.count(),
             data: Vec::<V>::with_capacity(self.count()),
-            dims: (self.d,),
+            shape: (self.d,),
             generator: |_dims, data| Self::Tensor {
                 phantom: PhantomData,
                 data,
@@ -1453,10 +1437,10 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor2S
         TensorPreparation {
             expected_size: self.count(),
             data: Vec::<V>::with_capacity(self.count()),
-            dims: (self.d1, self.d2),
-            generator: |dims, data| Self::Tensor {
-                d1: dims.0,
-                d2: dims.1,
+            shape: (self.d1, self.d2),
+            generator: |shape, data| Self::Tensor {
+                d1: shape.0,
+                d2: shape.1,
                 data,
             },
         }
@@ -1500,11 +1484,11 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> TensorBuilder<V>
         TensorPreparation {
             expected_size: self.count(),
             data: Vec::<V>::with_capacity(self.count()),
-            dims: (self.d1, self.d2, self.d3),
-            generator: |dims, data| Self::Tensor {
-                d1: dims.0,
-                d2: dims.1,
-                d3: dims.2,
+            shape: (self.d1, self.d2, self.d3),
+            generator: |shape, data| Self::Tensor {
+                d1: shape.0,
+                d2: shape.1,
+                d3: shape.2,
                 data,
             },
         }

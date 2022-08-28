@@ -1,5 +1,7 @@
-//! The mathematical word tensor is used here more broadly to describe
-//! arrays with multiple indexes containing copiable data.
+//! The mathematical word [tensor](https://en.wikipedia.org/wiki/Tensor) is used here to describe more broadly
+//! arrays with multiple indexes.
+//!
+//!
 
 use super::dimensions::*;
 use std::fmt::{Debug, Error, Formatter};
@@ -11,7 +13,7 @@ pub trait Tensor: PartialEq + Index<Self::MultiIndex> + IndexMut<Self::MultiInde
     /// The type of elements stored in the tensor.
     type Element: PartialEq + Debug;
     /// The type of the dimensions tuple
-    type Dimensions: Copy + Eq + Debug;
+    type Shape: Copy + Eq + Debug;
     // the type of a multi-index to retrieve an element
     type MultiIndex: Copy + Eq + Debug;
     /// The number of dimensions, also corresponding
@@ -20,16 +22,18 @@ pub trait Tensor: PartialEq + Index<Self::MultiIndex> + IndexMut<Self::MultiInde
     /// The total number of coordinates
     fn count(&self) -> u64;
     /// The tuple of dimensions
-    fn dims(&self) -> Self::Dimensions;
+    fn shape(&self) -> Self::Shape;
     /// Update some elements of the tensor
     fn update(&mut self, updater: impl FnMut(Self::MultiIndex, &mut Self::Element));
 }
 
+/// A tensor of rank 0 (that is to say a scalar) containing a single value of type V.
 #[derive(PartialEq)]
 pub struct Tensor0<V: PartialEq + Debug> {
     pub(crate) data: V,
 }
 
+/// A tensor of rank 1 and dimension represented by tag T containing values of type V.
 #[derive(PartialEq)]
 pub struct Tensor1<T: DimTag, V: PartialEq + Debug> {
     pub(crate) phantom: PhantomData<T>,
@@ -144,13 +148,13 @@ pub type StaticMatrix<const N1: usize, const N2: usize, V> =
 
 impl<V: PartialEq + Debug> Tensor for Tensor0<V> {
     type Element = V;
-    type Dimensions = ();
+    type Shape = ();
     type MultiIndex = ();
     const RANK: u16 = 0;
     fn count(&self) -> u64 {
         1
     }
-    fn dims(&self) -> Self::Dimensions {}
+    fn shape(&self) -> Self::Shape {}
     fn update(&mut self, mut updater: impl FnMut((), &mut V)) {
         updater((), &mut self.data)
     }
@@ -158,13 +162,13 @@ impl<V: PartialEq + Debug> Tensor for Tensor0<V> {
 
 impl<T: DimTag, V: PartialEq + Debug> Tensor for Tensor1<T, V> {
     type Element = V;
-    type Dimensions = (Dim<T>,);
+    type Shape = (Dim<T>,);
     type MultiIndex = (usize,);
     const RANK: u16 = 1;
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         let n = self.data.len();
         unsafe { (Dim::<T>::unsafe_new(n),) }
     }
@@ -177,13 +181,13 @@ impl<T: DimTag, V: PartialEq + Debug> Tensor for Tensor1<T, V> {
 
 impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor for Tensor2<T1, T2, V> {
     type Element = V;
-    type Dimensions = (Dim<T1>, Dim<T2>);
+    type Shape = (Dim<T1>, Dim<T2>);
     type MultiIndex = (usize, usize);
     const RANK: u16 = 2;
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         (self.d1, self.d2)
     }
     fn update(&mut self, mut updater: impl FnMut(Self::MultiIndex, &mut V)) {
@@ -198,13 +202,13 @@ impl<T1: DimTag, T2: DimTag, V: PartialEq + Debug> Tensor for Tensor2<T1, T2, V>
 
 impl<T1: DimTag, T2: DimTag, T3: DimTag, V: PartialEq + Debug> Tensor for Tensor3<T1, T2, T3, V> {
     type Element = V;
-    type Dimensions = (Dim<T1>, Dim<T2>, Dim<T3>);
+    type Shape = (Dim<T1>, Dim<T2>, Dim<T3>);
     type MultiIndex = (usize, usize, usize);
     const RANK: u16 = 3;
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         (self.d1, self.d2, self.d3)
     }
     fn update(&mut self, mut updater: impl FnMut((usize, usize, usize), &mut V)) {
@@ -224,13 +228,13 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, T4: DimTag, V: PartialEq + Debug> Tenso
     for Tensor4<T1, T2, T3, T4, V>
 {
     type Element = V;
-    type Dimensions = (Dim<T1>, Dim<T2>, Dim<T3>, Dim<T4>);
+    type Shape = (Dim<T1>, Dim<T2>, Dim<T3>, Dim<T4>);
     type MultiIndex = (usize, usize, usize, usize);
     const RANK: u16 = 4;
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         (self.d1, self.d2, self.d3, self.d4)
     }
     fn update(&mut self, mut updater: impl FnMut(Self::MultiIndex, &mut V)) {
@@ -253,13 +257,13 @@ impl<T1: DimTag, T2: DimTag, T3: DimTag, T4: DimTag, T5: DimTag, V: PartialEq + 
     for Tensor5<T1, T2, T3, T4, T5, V>
 {
     type Element = V;
-    type Dimensions = (Dim<T1>, Dim<T2>, Dim<T3>, Dim<T4>, Dim<T5>);
+    type Shape = (Dim<T1>, Dim<T2>, Dim<T3>, Dim<T4>, Dim<T5>);
     type MultiIndex = (usize, usize, usize, usize, usize);
     const RANK: u16 = 5;
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         (self.d1, self.d2, self.d3, self.d4, self.d5)
     }
     fn update(&mut self, mut updater: impl FnMut(Self::MultiIndex, &mut V)) {
@@ -292,13 +296,13 @@ impl<
     > Tensor for Tensor6<T1, T2, T3, T4, T5, T6, V>
 {
     type Element = V;
-    type Dimensions = (Dim<T1>, Dim<T2>, Dim<T3>, Dim<T4>, Dim<T5>, Dim<T6>);
+    type Shape = (Dim<T1>, Dim<T2>, Dim<T3>, Dim<T4>, Dim<T5>, Dim<T6>);
     type MultiIndex = (usize, usize, usize, usize, usize, usize);
     const RANK: u16 = 6;
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         (self.d1, self.d2, self.d3, self.d4, self.d5, self.d6)
     }
     fn update(&mut self, mut updater: impl FnMut(Self::MultiIndex, &mut V)) {
@@ -335,7 +339,7 @@ impl<
     > Tensor for Tensor7<T1, T2, T3, T4, T5, T6, T7, V>
 {
     type Element = V;
-    type Dimensions = (
+    type Shape = (
         Dim<T1>,
         Dim<T2>,
         Dim<T3>,
@@ -349,7 +353,7 @@ impl<
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         (
             self.d1, self.d2, self.d3, self.d4, self.d5, self.d6, self.d7,
         )
@@ -392,7 +396,7 @@ impl<
     > Tensor for Tensor8<T1, T2, T3, T4, T5, T6, T7, T8, V>
 {
     type Element = V;
-    type Dimensions = (
+    type Shape = (
         Dim<T1>,
         Dim<T2>,
         Dim<T3>,
@@ -407,7 +411,7 @@ impl<
     fn count(&self) -> u64 {
         self.data.len() as u64
     }
-    fn dims(&self) -> Self::Dimensions {
+    fn shape(&self) -> Self::Shape {
         (
             self.d1, self.d2, self.d3, self.d4, self.d5, self.d6, self.d7, self.d8,
         )

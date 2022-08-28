@@ -16,13 +16,19 @@ pub fn generate_thumbprint() -> u16 {
 }
 
 /// An abstraction representing a static or dynamic information
-/// about a dimension.
-pub trait DimTag: Eq + Copy {
+/// about a dimension. Types implementing DimTag do not need to
+/// be instanciable as their main purpose is to represent dimension
+/// in the type system.
+pub trait DimTag: PartialEq + Copy {
+    /// Returns a u16 used to name a dynamic dimension or None
+    /// if the dimension is statically known. This is mainly used
+    /// for displaying debugging information.
     fn get_thumbprint() -> Option<u16>;
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub struct StaticDimTag<const N: usize> {}
+/// A tag representing a dimension known at compile time.
+#[derive(PartialEq, Clone, Copy)]
+pub enum StaticDimTag<const N: usize> {}
 
 impl<const N: usize> DimTag for StaticDimTag<N> {
     fn get_thumbprint() -> Option<u16> {
@@ -30,8 +36,10 @@ impl<const N: usize> DimTag for StaticDimTag<N> {
     }
 }
 
-/// A type wrapping an usize value and representing
-/// a dimension.
+/// A type wrapping a usize value and representing
+/// a dimension. All safe construction methods of instances for
+/// this type makes sure that two instances with the same tag
+/// necessarily represent the same dimension.
 #[derive(Clone, Copy)]
 pub struct Dim<T: DimTag> {
     phantom: PhantomData<T>,
@@ -47,10 +55,14 @@ impl<T: DimTag> Dim<T> {
         }
     }
 
+    /// Return the dimension as a usize.
     pub fn as_usize(&self) -> usize {
         self.v
     }
 
+    /// Returns the thumbprint of the T. As for tags
+    /// this value is mainly used
+    /// for displaying debugging information.
     pub fn get_thumbprint(&self) -> Option<u16> {
         T::get_thumbprint()
     }
@@ -81,23 +93,7 @@ impl<T: DimTag> Eq for Dim<T> {}
 /// An alias representing a staticly known dimension
 pub type StaticDim<const N: usize> = Dim<StaticDimTag<N>>;
 
-#[macro_export]
-macro_rules! new_dynamic_dim {
-    ($integer:expr) => {{
-        #[derive(PartialEq, Eq, Debug, Clone, Copy)]
-        enum DynDimTag {}
-        lazy_static::lazy_static! {
-            static ref THUMBPRINT: u16 = generate_thumbprint();
-        }
-        impl DimTag for DynDimTag {
-            fn get_thumbprint() -> Option<u16> {
-                Some(*THUMBPRINT)
-            }
-        }
-        unsafe { Dim::<DynDimTag>::unsafe_new($integer) }
-    }};
-}
-
+/// Generate a new dimension wrapping the constant size N.
 pub fn new_static_dim<const N: usize>() -> Dim<StaticDimTag<N>> {
     Dim {
         phantom: PhantomData {},
