@@ -1,7 +1,9 @@
 //! The mathematical word [tensor](https://en.wikipedia.org/wiki/Tensor) is used here to describe more broadly
-//! arrays with multiple indexes.
-//!
-//!
+//! arrays with multiple indexes. Elements can be equated and accessed throught tuple of `usize`.
+//! ```
+//! let tensor: Tensor3<StaticDimTag<3>, StaticDimTag<2>, StaticDimTag<5>, f64> = ...;
+//! let element: f64 = tensor[(1, 0, 4)];
+//! ```
 
 use super::dimensions::*;
 use std::fmt::{Debug, Error, Formatter};
@@ -14,7 +16,7 @@ pub trait Tensor: PartialEq + Index<Self::MultiIndex> + IndexMut<Self::MultiInde
     type Element: PartialEq + Debug;
     /// The type of the dimensions tuple
     type Shape: Copy + Eq + Debug;
-    // the type of a multi-index to retrieve an element
+    /// The type of a multi-index that can be used to retrieve an element.
     type MultiIndex: Copy + Eq + Debug;
     /// The number of dimensions, also corresponding
     /// to the number of indexes.

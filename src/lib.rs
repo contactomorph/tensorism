@@ -31,8 +31,8 @@
 //! ```
 //! let n: usize = …;
 //! let m: usize = …;
-//! // A tensor of floats of rank 4 with dimensions n, 3, m and n
-//! // of unnamed type `Tensor4<TagN, StaticDimTag<3>, TagM, TagN, f64>`.
+//! // A tensor of floats of rank 4 with dimensions n, 3, m and n.
+//! // Its type is similar to `Tensor4<TagN, StaticDimTag<3>, TagM, TagN, f64>`.
 //! let tensor_c: Tensor4<_, StaticDimTag<3>, _, _, f64> =
 //!   TensorBuilding::with(new_dynamic_dim!(n))
 //!     .with_static::<3>()
@@ -40,8 +40,8 @@
 //!     .with_first()
 //!     .define(|(i, j, k, l)| … as f64);
 //!
-//! // A tensor of booleans of rank 2 with dimensions m and n
-//! // of unnamed type `Tensor4<TagM, TagN, bool>`.
+//! // A tensor of booleans of rank 2 with dimensions m and n.
+//! // Its type is similar to `Tensor4<TagM, TagN, bool>`.
 //! let tensor_d: Tensor2<_, _, bool> =
 //!   TensorBuilding::with(tensor_c.shape().2)
 //!     .with(tensor_c.shape().0)

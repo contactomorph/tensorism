@@ -1,10 +1,16 @@
 [package]
 name = "tensorism"
 version = "0.1.0"
-authors = ["Eddy Cizeron <eddy.cizeron@shift-technology.com>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Eddy Cizeron <eddy.cizeron@gmail.com>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+keywords = ["tensor", "array", "multidimensional"]
+categories = ["data-structures", "science"]
+description = "Multidimensional arrays with bounds included in the type system."
+homepage = ""
+documentation = ""
+repository = "https://github.com/contactomorph/tensorism"
+readme = ""
 
 [dependencies]
 lazy_static = "1.4.0"
