@@ -1372,7 +1372,7 @@ pub trait TensorBuilder<V> {
 
 impl<T: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
     type Tensor = Tensor1<T, V>;
-    type MultiIndex = usize;
+    type MultiIndex = (usize,);
 
     fn fill(&self, value: &V) -> Self::Tensor
     where
@@ -1386,7 +1386,7 @@ impl<T: DimTag, V: PartialEq + Debug> TensorBuilder<V> for Tensor1Shape<T> {
     fn define(&self, mut f: impl FnMut(Self::MultiIndex) -> V) -> Self::Tensor {
         let mut data = Vec::<V>::with_capacity(self.d.as_usize());
         for i in 0..self.d.as_usize() {
-            data.push(f(i))
+            data.push(f((i,)))
         }
         Self::Tensor {
             phantom: PhantomData,
