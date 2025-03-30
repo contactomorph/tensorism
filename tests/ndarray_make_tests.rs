@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use ndarray::{Array1, Array2};
+use std::str::FromStr;
 use tensorism::{ndarray_format_for_make, ndarray_make};
 
 #[test]
@@ -50,19 +50,15 @@ fn run_make_macro_aggregating_on_single_index() {
 
 #[test]
 fn run_make_macro_aggregating_twice_on_each_indexes() {
-    let a: Array2<_> = Array2::<_>::from_shape_fn((9, 10), |(i, j)| {
-        i as i64 * (j + 1) as i64
-    });
+    let a: Array2<_> = Array2::<_>::from_shape_fn((9, 10), |(i, j)| i as i64 * (j + 1) as i64);
     let x: i64 = ndarray_make! {Iterator::sum(i $ Iterator::min(j $ a[i, j]).unwrap())};
     assert_eq!(36i64, x);
 }
 
 #[test]
 fn run_make_macro_creating_new_tensor() {
-    let a: Array2<_> = Array2::<_>::from_shape_fn((9, 10), |(i, j)| {
-        i as i64 * (j + 1) as i64
-    });
-    let b: Array1<_> = Array1::<f64>::from_elem((10,),12f64);
+    let a: Array2<_> = Array2::<_>::from_shape_fn((9, 10), |(i, j)| i as i64 * (j + 1) as i64);
+    let b: Array1<_> = Array1::<f64>::from_elem((10,), 12f64);
     let t = ndarray_make! {i j $ a[i, j] as f64 + b[j]};
     assert_eq!((9, 10), t.dim());
 }
@@ -70,9 +66,7 @@ fn run_make_macro_creating_new_tensor() {
 #[test]
 #[should_panic(expected = "Non matching dimensions")]
 fn run_make_macro_must_fail() {
-    let a: Array2<_> = Array2::<_>::from_shape_fn((9, 10), |(i, j)| {
-        i as i64 * (j + 1) as i64
-    });
-    let b: Array1<_> = Array1::<f64>::from_elem((50,),12f64);
+    let a: Array2<_> = Array2::<_>::from_shape_fn((9, 10), |(i, j)| i as i64 * (j + 1) as i64);
+    let b: Array1<_> = Array1::<f64>::from_elem((50,), 12f64);
     ndarray_make! {i j $ a[i, j] as f64 + b[j]};
 }

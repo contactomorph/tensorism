@@ -1,5 +1,6 @@
 use crate::types::*;
 use proc_macro2::{Delimiter, Group, Literal, Span, TokenStream, TokenTree};
+use quote::ToTokens;
 
 fn sequentialize_tensor_func(func: RicciFunction, stream: &mut TokenStream) {
     let mut direct_indexes = func.inverted_indexes.clone();
@@ -31,7 +32,7 @@ fn sequentialize_sequence(sequence: RicciSequence, stream: &mut TokenStream) {
             RicciAlternative::Func(sub_func) => {
                 sequentialize_tensor_func(sub_func, &mut content);
             }
-            RicciAlternative::Tree(token) => content.extend_one(token),
+            RicciAlternative::Tree(token) => token.to_tokens(&mut content),
             RicciAlternative::Seq(sub_sequence) => {
                 sequentialize_sequence(sub_sequence, &mut content);
             }
@@ -55,16 +56,16 @@ fn sequentialize_sequence(sequence: RicciSequence, stream: &mut TokenStream) {
         }
     }
     if sequence.use_parens {
-        stream.extend_one(TokenTree::Group(Group::new(
-            Delimiter::Parenthesis,
-            content,
-        )));
+        TokenTree::Group(Group::new(Delimiter::Parenthesis, content)).to_tokens(stream);
     } else {
         stream.extend(content)
     }
 }
 
-fn create_dimension_computation_token_stream(tensor_use: &TensorUse, ricci_position: &RicciPosition) -> TokenStream {
+fn create_dimension_computation_token_stream(
+    tensor_use: &TensorUse,
+    ricci_position: &RicciPosition,
+) -> TokenStream {
     let tensor_name = &ricci_position.tensor_name;
     if tensor_use.get_order(tensor_name) == 1 {
         quote_spanned! {
@@ -83,13 +84,15 @@ fn sequentialize_header(index_use: IndexUse, tensor_use: &TensorUse) -> TokenStr
     for (name, positions) in index_use.into_iter() {
         let dimension_name = format_ident!("{}_dimension", name);
         let ricci_position = positions.first().unwrap();
-        let dimension_computation = create_dimension_computation_token_stream(tensor_use, ricci_position);
+        let dimension_computation =
+            create_dimension_computation_token_stream(tensor_use, ricci_position);
         let length_definition = quote_spanned! {
             ricci_position.tensor_name.span() => let #dimension_name: usize = #dimension_computation;
         };
         output.extend(length_definition);
         for ricci_position in positions.into_iter().skip(1) {
-            let other_dimension_computation = create_dimension_computation_token_stream(tensor_use, &ricci_position);
+            let other_dimension_computation =
+                create_dimension_computation_token_stream(tensor_use, &ricci_position);
             let equality_assertion = quote_spanned! {
                 ricci_position.index_name.span() =>
                 {
@@ -146,10 +149,14 @@ fn sequentialize_body(sequence: RicciSequence, stream: &mut TokenStream) {
     }
 }
 
-pub fn sequentialize(sequence: RicciSequence, index_use: IndexUse, tensor_use: TensorUse) -> TokenStream {
+pub fn sequentialize(
+    sequence: RicciSequence,
+    index_use: IndexUse,
+    tensor_use: TensorUse,
+) -> TokenStream {
     let mut stream = sequentialize_header(index_use, &tensor_use);
     sequentialize_body(sequence, &mut stream);
     let mut output = TokenStream::new();
-    output.extend_one(TokenTree::Group(Group::new(Delimiter::Brace, stream)));
-    output.into()
+    TokenTree::Group(Group::new(Delimiter::Brace, stream)).to_tokens(&mut output);
+    output
 }

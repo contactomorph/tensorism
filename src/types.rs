@@ -113,9 +113,8 @@ impl IndexUse {
                 true
             }
             None => {
-                if self.indexes_in_order.contains(&&index_as_string) {
-                    let mut positions = Vec::new();
-                    positions.push(position);
+                if self.indexes_in_order.contains(&index_as_string) {
+                    let positions = vec![position];
                     self.correspondence.insert(index_as_string, positions);
                     true
                 } else {
@@ -157,7 +156,8 @@ impl TensorUse {
     }
 
     pub fn get_order(&self, tensor_name: &Ident) -> usize {
-        *self.tensor_orders
+        *self
+            .tensor_orders
             .get(&tensor_name.to_string())
             .expect("Missing tensor name")
     }

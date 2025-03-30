@@ -79,7 +79,10 @@ fn parse_group(
                 }
                 let consistent = tensor_use.update_order(&tensor_name, indexes.len());
                 if !consistent {
-                    generate_compilation_error(tensor_name.span(), "Inconsistent number of indexes.")?
+                    generate_compilation_error(
+                        tensor_name.span(),
+                        "Inconsistent number of indexes.",
+                    )?
                 }
                 sequence.content.pop();
                 sequence.content.push(RicciAlternative::TensorAccess {
@@ -128,11 +131,18 @@ fn parse_sequence(
     Ok(())
 }
 
-pub fn parse(input: proc_macro::TokenStream) -> Result<(RicciSequence, IndexUse, TensorUse), TokenStream> {
+pub fn parse(
+    input: proc_macro::TokenStream,
+) -> Result<(RicciSequence, IndexUse, TensorUse), TokenStream> {
     let input: TokenStream = input.into();
     let mut sequence = RicciSequence::initial();
     let mut index_use = IndexUse::new();
     let mut tensor_use = TensorUse::new();
-    parse_sequence(&mut input.into_iter(), &mut sequence, &mut index_use, &mut tensor_use)?;
+    parse_sequence(
+        &mut input.into_iter(),
+        &mut sequence,
+        &mut index_use,
+        &mut tensor_use,
+    )?;
     Ok((sequence, index_use, tensor_use))
 }
